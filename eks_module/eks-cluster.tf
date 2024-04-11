@@ -1,36 +1,42 @@
+locals {
+  cluster_name = "education-eks-${random_string.suffix.result}"
+}
+
 module "eks" {
-  source          = "terraform-aws-modules/eks/aws"
+  source  = "terraform-aws-modules/eks/aws"
+  version = "19.15.3"
+
   cluster_name    = local.cluster_name
-  cluster_version = "1.24"
-  subnets         = module.vpc.private_subnets
+  cluster_version = "1.27"
 
-  tags = {
-    Environment = "training"
-    GithubRepo  = "terraform-aws-eks"
-    GithubOrg   = "terraform-aws-modules"
+  vpc_id                         = module.vpc.vpc_id
+  subnet_ids                     = module.vpc.private_subnets
+  cluster_endpoint_public_access = true
+
+  eks_managed_node_group_defaults = {
+    ami_type = "AL2_x86_64"
+
   }
 
-  vpc_id = module.vpc.vpc_id
+  eks_managed_node_groups = {
+    one = {
+      name = "node-group-1"
 
-  workers_group_defaults = {
-    root_volume_type = "gp2"
-  }
+      instance_types = ["t3.small"]
 
-  worker_groups = [
-    {
-      name                          = "worker-group-1"
-      instance_type                 = "t3.small"
-      additional_userdata           = "echo foo bar"
-      asg_desired_capacity          = 2
-      additional_security_group_ids = [aws_security_group.worker_group_mgmt_one.id]
+      min_size     = 1
+      max_size     = 3
+      desired_size = 2
     }
-  ]
-}
 
-data "aws_eks_cluster" "cluster" {
-  name = module.eks.cluster_id
-}
+    two = {
+      name = "node-group-2"
 
-data "aws_eks_cluster_auth" "cluster" {
-  name = module.eks.cluster_id
+      instance_types = ["t3.small"]
+
+      min_size     = 1
+      max_size     = 2
+      desired_size = 1
+    }
+  }
 }
