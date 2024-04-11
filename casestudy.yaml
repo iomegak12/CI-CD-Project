@@ -1,0 +1,208 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-config-map
+data:
+  mysql-server: demo-app-mysql # The name of mysql service
+  mysql-database-name: demoDb # The name of the database used by the demo app
+  mysql-user-username: myUser # A new created user for the demo app
+  mysql-root-username: root
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-pass
+type: Opaque
+data:
+  mysql-root-password: cm9vdHBhc3N3b3Jk ## rootpassword
+  mysql-user-password: dXNlcnBhc3N3b3Jk ## userpassword
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-app-mysql
+  labels:
+    app: demo-app
+spec:
+  ports:
+    - port: 3306
+  selector:
+    app: demo-app
+    tier: mysql
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  labels:
+    app: demo-app
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-app-mysql
+  labels:
+    app: demo-app
+spec:
+  selector:
+    matchLabels:
+      app: demo-app
+      tier: mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: demo-app
+        tier: mysql
+    spec:
+      containers:
+        - image: mysql:5.6
+          name: mysql
+          env:
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: mysql-config-map
+                  key: mysql-database-name
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-pass
+                  key: mysql-root-password
+            - name: MYSQL_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: mysql-config-map
+                  key: mysql-user-username
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-pass
+                  key: mysql-root-password
+          livenessProbe:
+            tcpSocket:
+              port: 3306
+          ports:
+            - containerPort: 3306
+              name: mysql
+          volumeMounts:
+            - name: mysql-persistent-storage
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: mysql-persistent-storage
+          persistentVolumeClaim:
+            claimName: mysql-pvc
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-app-spring
+  labels:
+    app: demo-app-spring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-app-spring
+  template:
+    metadata:
+      labels:
+        app: demo-app-spring
+    spec:
+      containers:
+        - name: demo-app-spring
+          image: jtdhamodharan/javaapp:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          resources:
+            limits:
+              cpu: 0.2
+              memory: "200Mi"
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-pass
+                  key: mysql-root-password
+            - name: DB_SERVER
+              valueFrom:
+                configMapKeyRef:
+                  name: mysql-config-map
+                  key: mysql-server
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: mysql-config-map
+                  key: mysql-database-name
+            - name: DB_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: mysql-config-map
+                  key: mysql-root-username
+      imagePullSecrets:
+        - name: regcred
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-app-spring
+  labels:
+    app: demo-app-spring
+spec:
+  type: LoadBalancer
+  selector:
+    app: demo-app-spring
+  ports:
+    - protocol: TCP
+      name: http
+      port: 8080
+      targetPort: 8080
+      nodePort: 30000
+      
+# ---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: myjavaapp-deployment
+# spec:
+#   replicas: 3
+#   selector:
+#     matchLabels:
+#       app: myjavaapp
+#   template:
+#     metadata:
+#       labels:
+#         app: myjavaapp
+#     spec:
+#       containers:
+#         - name: myjavaapp
+#           image: jtdhamodharan/javaapp:latest
+#           ports:
+#             - containerPort: 8080
+
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: myjavaapp-service
+# spec:
+#   selector:
+#     app: myjavaapp
+#   ports:
+#     - name: http
+#       port: 80
+#       targetPort: 8080
+#   type: LoadBalancer

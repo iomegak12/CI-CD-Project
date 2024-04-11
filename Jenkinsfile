@@ -39,47 +39,23 @@ pipeline {
       }
     }
 
-       stage('Unit Test maven'){
-               when{expression{params.action == "create"}}
-            steps{
-               script{
-
-                   mvnTest()
-               }
-            }
-       }
-
-        stage('Integration Test maven'){
-              when{expression{params.action == "create"}}
-            steps{
-               script{
-
-                   mvnIntegrationTest()
-               }
-            }
-        }
-
-/*
-    stage('Static Code Analysis: Sonarqube') {
+    stage('Unit Test maven') {
       when { expression { params.action == 'create' } }
       steps {
         script {
-          def SonarQubecredentialsId = 'SonarQubeapi'
-          staticCodeAnalysis(SonarQubecredentialsId)
+          mvnTest()
         }
       }
     }
 
-    stage('Quality Gate status check: Sonarqube') {
+        stage('Integration Test maven') {
       when { expression { params.action == 'create' } }
       steps {
         script {
-          def SonarQubecredentialsId = 'SonarQubeapi'
-          staticCodeAnalysis(SonarQubecredentialsId)
+          mvnIntegrationTest()
         }
       }
-    }
-    */
+        }
 
         stage('Docker Image Build') {
       when { expression { params.action == 'create' } }
@@ -115,7 +91,6 @@ pipeline {
       }
         }
 
-       /*
         stage('Create EKS cluster: Terraform'){
               when{expression{params.action == "create"}}
             steps{
@@ -163,12 +138,11 @@ pipeline {
                   if(apply){
 
                     sh """
-                      kubectl apply -f .
+                      kubectl apply -f ./casestudy.yaml
                     """
                   }
                }
             }
         }
-       */
     }
 }
