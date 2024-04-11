@@ -30,7 +30,15 @@ pipeline {
       }
         }
 
-      /*
+    stage('Maven build: maven') {
+      when { expression { params.action == 'create' } }
+      steps {
+        script {
+          mvnBuild()
+        }
+      }
+    }
+
        stage('Unit Test maven'){
                when{expression{params.action == "create"}}
             steps{
@@ -50,36 +58,28 @@ pipeline {
                }
             }
         }
-        */
 
-    stage('Maven build: maven') {
+/*
+    stage('Static Code Analysis: Sonarqube') {
       when { expression { params.action == 'create' } }
       steps {
         script {
-          mvnBuild()
+          def SonarQubecredentialsId = 'SonarQubeapi'
+          staticCodeAnalysis(SonarQubecredentialsId)
         }
       }
     }
 
-    // stage('Static Code Analysis: Sonarqube') {
-    //   when { expression { params.action == 'create' } }
-    //   steps {
-    //     script {
-    //       def SonarQubecredentialsId = 'SonarQubeapi'
-    //       staticCodeAnalysis(SonarQubecredentialsId)
-    //     }
-    //   }
-    // }
-
-    // stage('Quality Gate status check: Sonarqube') {
-    //   when { expression { params.action == 'create' } }
-    //   steps {
-    //     script {
-    //       def SonarQubecredentialsId = 'SonarQubeapi'
-    //       staticCodeAnalysis(SonarQubecredentialsId)
-    //     }
-    //   }
-    // }
+    stage('Quality Gate status check: Sonarqube') {
+      when { expression { params.action == 'create' } }
+      steps {
+        script {
+          def SonarQubecredentialsId = 'SonarQubeapi'
+          staticCodeAnalysis(SonarQubecredentialsId)
+        }
+      }
+    }
+    */
 
         stage('Docker Image Build') {
       when { expression { params.action == 'create' } }
