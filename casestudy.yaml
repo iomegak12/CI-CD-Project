@@ -122,7 +122,7 @@ spec:
     spec:
       containers:
         - name: demo-app-spring
-          image: jtdhamodharan/javaapp:latest
+          image: jtdhamodharan/airbusapp:latest
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
